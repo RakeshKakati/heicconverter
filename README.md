@@ -1,23 +1,32 @@
-# HEIC → Any Format
+# HEIC Converter
 
-Convert HEIC/HEIF images to JPEG, PNG, or GIF in your browser. No server uploads—conversion runs entirely client-side using [heic2any](https://github.com/alexcorvi/heic2any).
+Convert HEIC/HEIF images to JPEG, PNG, or GIF in your browser. No uploads—conversion runs entirely client-side using [heic2any](https://github.com/alexcorvi/heic2any).
+
+## For everyone
+
+Once deployed (e.g. on Vercel), anyone can use the site:
+
+1. Open the site URL (e.g. `https://your-app.vercel.app`).
+2. Click **Convert a photo now** or scroll to the converter.
+3. Drop or select a HEIC/HEIF file, choose output format (JPEG, PNG, or GIF), then **Convert** and **Download**.
+
+No sign-up, no uploads to any server—conversion happens in the browser.
 
 ## Features
 
+- **Landing page** with clear value and one-click access to the tool
 - **Drag & drop** or click to select HEIC/HEIF files
 - **Output formats:** JPEG, PNG, GIF
 - **Quality slider** for JPEG
-- **Instant preview** and download of the converted image
+- **Instant preview** and download
 
-## Run locally
+## Run locally (development)
 
-Open `index.html` directly in a browser, or serve the folder over HTTP (recommended for best compatibility with the library’s workers):
+Open `index.html` in a browser, or serve the folder over HTTP (recommended for heic2any’s workers):
 
 ```bash
-# Option 1: Python
 python3 -m http.server 8080
-
-# Option 2: Node (npx)
+# or
 npx serve -p 8080
 ```
 

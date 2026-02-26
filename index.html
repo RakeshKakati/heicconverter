@@ -179,6 +179,31 @@
       color: var(--text-muted);
     }
 
+    .dropzone.has-file {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .dropzone-file-name {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-top: 0.5rem;
+      word-break: break-all;
+    }
+
+    .dropzone-change {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .dropzone-change:hover {
+      color: var(--accent);
+    }
+
     .options {
       margin-top: 1.5rem;
       display: grid;
@@ -371,10 +396,12 @@
 
     <div class="converter-card">
       <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop HEIC file or click to choose">
-        <input type="file" id="fileInput" accept=".heic,.heif,image/heic,image/heif" />
+        <input type="file" id="fileInput" accept=".heic,.heif,.HEIC,.HEIF,image/heic,image/heif,image/heic-sequence,image/heif-sequence,application/octet-stream" />
         <div class="dropzone-icon">📷</div>
-        <div class="dropzone-text">Drop HEIC file here or click to browse</div>
-        <div class="dropzone-hint">Accepts .heic and .heif</div>
+        <div class="dropzone-text" id="dropzoneText">Drop HEIC file here or click to browse</div>
+        <div class="dropzone-hint" id="dropzoneHint">Accepts .heic and .heif</div>
+        <div class="dropzone-file-name" id="dropzoneFileName" aria-live="polite" style="display: none;"></div>
+        <div class="dropzone-change" id="dropzoneChange" style="display: none;">Choose a different file</div>
       </div>
 
       <div class="options">
@@ -428,6 +455,10 @@
       const resultPreview = document.getElementById("resultPreview");
       const resultFileName = document.getElementById("resultFileName");
       const downloadFromResult = document.getElementById("downloadFromResult");
+      const dropzoneText = document.getElementById("dropzoneText");
+      const dropzoneHint = document.getElementById("dropzoneHint");
+      const dropzoneFileName = document.getElementById("dropzoneFileName");
+      const dropzoneChange = document.getElementById("dropzoneChange");
 
       let currentBlob = null;
       let currentFileName = null;
@@ -441,6 +472,33 @@
 
       function hideMessage() {
         messageEl.className = "message";
+      }
+
+      function updateDropzoneState(file) {
+        if (file) {
+          dropzone.classList.add("has-file");
+          dropzoneText.textContent = "Photo selected";
+          dropzoneHint.textContent = "";
+          dropzoneFileName.textContent = file.name;
+          dropzoneFileName.style.display = "block";
+          dropzoneChange.style.display = "block";
+        } else {
+          dropzone.classList.remove("has-file");
+          dropzoneText.textContent = "Drop HEIC file here or click to browse";
+          dropzoneHint.textContent = "Accepts .heic and .heif";
+          dropzoneFileName.textContent = "";
+          dropzoneFileName.style.display = "none";
+          dropzoneChange.style.display = "none";
+        }
+      }
+
+      function looksLikeHeic(file) {
+        if (!file || !file.name) return false;
+        const name = file.name.toLowerCase();
+        const type = (file.type || "").toLowerCase();
+        if (name.endsWith(".heic") || name.endsWith(".heif")) return true;
+        if (type.includes("heic") || type.includes("heif")) return true;
+        return false;
       }
 
       function updateQualityLabel() {
@@ -488,10 +546,24 @@
         if (file) setFile(file);
       });
 
+      dropzoneChange.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.value = "";
+        setFile(null);
+        fileInput.click();
+      });
+
       function setFile(file) {
-        const name = (file.name || "").toLowerCase();
-        if (!name.endsWith(".heic") && !name.endsWith(".heif") && !file.type.includes("heic") && !file.type.includes("heif")) {
-          showMessage("Please choose a HEIC or HEIF file.", "error");
+        if (!file) {
+          currentBlob = null;
+          currentFileName = null;
+          convertedBlob = null;
+          hideMessage();
+          convertBtn.disabled = true;
+          downloadBtn.style.display = "none";
+          resultEl.classList.remove("visible");
+          updateDropzoneState(null);
           return;
         }
         currentBlob = file;
@@ -501,6 +573,10 @@
         convertBtn.disabled = false;
         resultEl.classList.remove("visible");
         downloadBtn.style.display = "none";
+        updateDropzoneState(file);
+        if (!looksLikeHeic(file)) {
+          showMessage("This may not be a HEIC file. Try converting anyway; we will show an error if it fails.", "error");
+        }
       }
 
       function getExtension(mime) {
@@ -513,7 +589,11 @@
       convertBtn.addEventListener("click", convert);
 
       async function convert() {
-        if (!currentBlob) return;
+        if (!currentBlob) {
+          showMessage("Please choose a HEIC photo first.", "error");
+          dropzone.focus();
+          return;
+        }
         convertBtn.disabled = true;
         hideMessage();
         const toType = formatSelect.value;
@@ -535,7 +615,7 @@
           downloadBtn.style.display = "inline-block";
           showMessage("Conversion complete.", "success");
         } catch (err) {
-          showMessage("Conversion failed: " + (err.message || "Unknown error"), "error");
+          showMessage("Conversion failed. Make sure the file is a valid HEIC/HEIF photo from iPhone or Mac.", "error");
         } finally {
           convertBtn.disabled = false;
         }

@@ -20,6 +20,18 @@ No sign-up, no uploads to any server—conversion happens in the browser.
 - **Quality slider** for JPEG
 - **Instant preview** and download
 
+## Stripe (bulk paywall)
+
+To enable the bulk paywall on Vercel:
+
+1. Create a [Stripe](https://stripe.com) account and get your **Secret key** (Dashboard → Developers → API keys).
+2. In the Vercel project: **Settings → Environment Variables** add:
+   - `STRIPE_SECRET_KEY` = your Stripe secret key (e.g. `sk_live_...` or `sk_test_...`)
+   - `STRIPE_BULK_PRICE_CENTS` (optional) = price in cents, e.g. `499` for $4.99 (default is 499)
+3. Redeploy. The "Continue to payment" button will redirect to Stripe Checkout.
+
+No Stripe Publishable Key is required for this flow (payment happens on Stripe's hosted page).
+
 ## Run locally (development)
 
 Open `index.html` in a browser, or serve the folder over HTTP (recommended for heic2any’s workers):

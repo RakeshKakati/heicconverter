@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/heic-to@1.4.2/dist/iife/heic-to.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     :root {
       --bg: #0d0d0f;
@@ -376,6 +377,104 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    /* ---- Tabs ---- */
+    .converter-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .converter-tabs button {
+      padding: 0.6rem 1rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .converter-tabs button:hover { color: var(--text); }
+    .converter-tabs button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .converter-panel { display: none; }
+    .converter-panel.active { display: block; }
+
+    /* ---- Bulk ---- */
+    .bulk-dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--bg);
+      margin-bottom: 1rem;
+    }
+    .bulk-dropzone:hover, .bulk-dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .bulk-dropzone input { display: none; }
+    .bulk-file-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .bulk-file-list li {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .bulk-file-list li:last-child { border-bottom: none; }
+    .bulk-actions { margin-top: 1rem; }
+    .bulk-badge {
+      font-size: 0.75rem;
+      color: var(--accent);
+      margin-left: 0.5rem;
+    }
+
+    /* ---- Paywall modal ---- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal-backdrop.visible { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 380px;
+      width: 100%;
+    }
+    .modal h3 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+    .modal p { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 1rem; line-height: 1.5; }
+    .modal-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .modal-actions .btn-primary { width: 100%; justify-content: center; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.5rem 0;
+    }
+    .modal-close:hover { color: var(--text); }
+    .paywall-price { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin: 0.5rem 0; }
   </style>
 </head>
 <body>
@@ -392,8 +491,14 @@
 
   <section id="converter" class="converter-section" aria-label="Converter tool">
     <h2>HEIC converter</h2>
-    <p class="section-desc">Drop your HEIC or HEIF file below and choose the output format.</p>
+    <p class="section-desc">Convert one file free, or unlock bulk conversion for multiple files.</p>
 
+    <div class="converter-tabs">
+      <button type="button" id="tabSingle" class="active" aria-pressed="true">Single file</button>
+      <button type="button" id="tabBulk" aria-pressed="false">Bulk <span class="bulk-badge" id="bulkBadge" style="display: none;"></span></button>
+    </div>
+
+    <div id="panelSingle" class="converter-panel active">
     <div class="converter-card">
       <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop HEIC file or click to choose">
         <input type="file" id="fileInput" accept=".heic,.heif,.HEIC,.HEIF,image/heic,image/heif,image/heic-sequence,image/heif-sequence,application/octet-stream" />
@@ -433,7 +538,51 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <div id="panelBulk" class="converter-panel">
+    <div class="converter-card">
+      <div class="bulk-dropzone" id="bulkDropzone" role="button" tabindex="0">
+        <input type="file" id="bulkFileInput" accept=".heic,.heif,.HEIC,.HEIF,image/heic,image/heif,application/octet-stream" multiple />
+        <div class="dropzone-icon">📷</div>
+        <div class="dropzone-text">Drop multiple HEIC files or click to browse</div>
+        <div class="dropzone-hint">2+ files require one-time unlock</div>
+      </div>
+      <ul class="bulk-file-list" id="bulkFileList"></ul>
+      <div class="options">
+        <div class="option-row">
+          <label for="bulkFormat">Output format</label>
+          <select id="bulkFormat">
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/png">PNG</option>
+          </select>
+        </div>
+        <div class="quality-row">
+          <label for="bulkQuality">Quality</label>
+          <input type="range" id="bulkQuality" min="0" max="1" step="0.05" value="0.92" />
+          <span class="quality-value" id="bulkQualityValue">92%</span>
+        </div>
+      </div>
+      <div class="bulk-actions actions">
+        <button type="button" class="btn-primary" id="bulkConvertBtn" disabled>Convert all</button>
+        <button type="button" class="btn-secondary" id="bulkDownloadZipBtn" disabled style="display: none;">Download as ZIP</button>
+      </div>
+      <div class="message" id="bulkMessage"></div>
+    </div>
+    </div>
   </section>
+
+  <div class="modal-backdrop" id="paywallModal" aria-hidden="true">
+    <div class="modal">
+      <h3>Unlock bulk conversion</h3>
+      <p>Convert multiple HEIC files at once and download them as a ZIP. One-time purchase, no subscription.</p>
+      <div class="paywall-price">$4.99</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" id="paywallCheckoutBtn">Continue to payment (Stripe)</button>
+        <button type="button" class="modal-close" id="paywallClose">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <footer>
     Conversion runs in your browser via <a href="https://github.com/hoppergee/heic-to" target="_blank" rel="noopener">heic-to</a> (libheif). No uploads.
@@ -630,6 +779,162 @@
 
       downloadBtn.addEventListener("click", doDownload);
       downloadFromResult.addEventListener("click", doDownload);
+
+      var BULK_STORAGE_KEY = "heic_bulk_session_id";
+      var tabSingle = document.getElementById("tabSingle");
+      var tabBulk = document.getElementById("tabBulk");
+      var panelSingle = document.getElementById("panelSingle");
+      var panelBulk = document.getElementById("panelBulk");
+      var bulkBadge = document.getElementById("bulkBadge");
+      var bulkDropzone = document.getElementById("bulkDropzone");
+      var bulkFileInput = document.getElementById("bulkFileInput");
+      var bulkFileList = document.getElementById("bulkFileList");
+      var bulkFormat = document.getElementById("bulkFormat");
+      var bulkQuality = document.getElementById("bulkQuality");
+      var bulkQualityValue = document.getElementById("bulkQualityValue");
+      var bulkConvertBtn = document.getElementById("bulkConvertBtn");
+      var bulkDownloadZipBtn = document.getElementById("bulkDownloadZipBtn");
+      var bulkMessage = document.getElementById("bulkMessage");
+      var paywallModal = document.getElementById("paywallModal");
+      var paywallCheckoutBtn = document.getElementById("paywallCheckoutBtn");
+      var paywallClose = document.getElementById("paywallClose");
+      var bulkFiles = [];
+      var bulkConverted = [];
+      var bulkUnlocked = false;
+      function checkBulkSession() {
+        var sid = localStorage.getItem(BULK_STORAGE_KEY);
+        if (!sid) return;
+        fetch("/api/verify-session?session_id=" + encodeURIComponent(sid)).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.ok) bulkUnlocked = true;
+          else localStorage.removeItem(BULK_STORAGE_KEY);
+        }).catch(function() { localStorage.removeItem(BULK_STORAGE_KEY); });
+      }
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("bulk_success") === "1" && params.get("session_id")) {
+        var sessionId = params.get("session_id");
+        fetch("/api/verify-session?session_id=" + encodeURIComponent(sessionId)).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.ok) {
+            localStorage.setItem(BULK_STORAGE_KEY, sessionId);
+            bulkUnlocked = true;
+            window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+            tabBulk.click();
+          }
+        });
+      } else { checkBulkSession(); }
+      tabSingle.addEventListener("click", function() {
+        tabSingle.classList.add("active"); tabSingle.setAttribute("aria-pressed", "true");
+        tabBulk.classList.remove("active"); tabBulk.setAttribute("aria-pressed", "false");
+        panelSingle.classList.add("active"); panelBulk.classList.remove("active");
+      });
+      tabBulk.addEventListener("click", function() {
+        tabBulk.classList.add("active"); tabBulk.setAttribute("aria-pressed", "true");
+        tabSingle.classList.remove("active"); tabSingle.setAttribute("aria-pressed", "false");
+        panelBulk.classList.add("active"); panelSingle.classList.remove("active");
+      });
+      bulkDropzone.addEventListener("click", function() { bulkFileInput.click(); });
+      bulkDropzone.addEventListener("dragover", function(e) { e.preventDefault(); bulkDropzone.classList.add("dragover"); });
+      bulkDropzone.addEventListener("dragleave", function() { bulkDropzone.classList.remove("dragover"); });
+      bulkDropzone.addEventListener("drop", function(e) {
+        e.preventDefault();
+        bulkDropzone.classList.remove("dragover");
+        var files = Array.from(e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : []).filter(function(f) {
+          var n = (f.name || "").toLowerCase();
+          var t = (f.type || "").toLowerCase();
+          return n.endsWith(".heic") || n.endsWith(".heif") || t.indexOf("heic") >= 0 || t.indexOf("heif") >= 0;
+        });
+        if (files.length) setBulkFilesList(files);
+      });
+      bulkFileInput.addEventListener("change", function() {
+        var files = Array.from(bulkFileInput.files || []);
+        if (files.length) setBulkFilesList(files);
+      });
+      function setBulkFilesList(files) {
+        bulkFiles = files;
+        bulkFileList.innerHTML = "";
+        files.forEach(function(f, i) {
+          var li = document.createElement("li");
+          li.textContent = (i + 1) + ". " + f.name;
+          bulkFileList.appendChild(li);
+        });
+        bulkConvertBtn.disabled = files.length === 0;
+        bulkDownloadZipBtn.style.display = "none";
+        bulkConverted = [];
+        bulkMessage.className = "message";
+        if (files.length > 1) { bulkBadge.textContent = files.length + " files"; bulkBadge.style.display = "inline"; }
+        else { bulkBadge.style.display = "none"; }
+      }
+      bulkQuality.addEventListener("input", function() {
+        bulkQualityValue.textContent = Math.round(Number(bulkQuality.value) * 100) + "%";
+      });
+      paywallClose.addEventListener("click", function() {
+        paywallModal.classList.remove("visible");
+        paywallModal.setAttribute("aria-hidden", "true");
+      });
+      paywallModal.addEventListener("click", function(e) {
+        if (e.target === paywallModal) paywallClose.click();
+      });
+      paywallCheckoutBtn.addEventListener("click", function() {
+        paywallCheckoutBtn.disabled = true;
+        paywallCheckoutBtn.textContent = "Redirecting…";
+        fetch("/api/create-checkout", { method: "POST" }).then(function(r) { return r.json(); }).then(function(data) {
+          if (data.url) window.location.href = data.url;
+          else {
+            bulkMessage.textContent = data.error || "Payment error";
+            bulkMessage.className = "message visible error";
+            paywallCheckoutBtn.disabled = false;
+            paywallCheckoutBtn.textContent = "Continue to payment (Stripe)";
+          }
+        }).catch(function() {
+          bulkMessage.textContent = "Network error.";
+          bulkMessage.className = "message visible error";
+          paywallCheckoutBtn.disabled = false;
+          paywallCheckoutBtn.textContent = "Continue to payment (Stripe)";
+        });
+      });
+      bulkConvertBtn.addEventListener("click", async function() {
+        if (bulkFiles.length === 0) return;
+        if (bulkFiles.length >= 2 && !bulkUnlocked) {
+          paywallModal.classList.add("visible");
+          paywallModal.setAttribute("aria-hidden", "false");
+          return;
+        }
+        var toType = bulkFormat.value;
+        var quality = toType === "image/jpeg" ? Number(bulkQuality.value) : undefined;
+        bulkConvertBtn.disabled = true;
+        bulkMessage.textContent = "Converting…";
+        bulkMessage.className = "message visible";
+        bulkConverted = [];
+        for (var i = 0; i < bulkFiles.length; i++) {
+          try {
+            var blob = await HeicTo({ blob: bulkFiles[i], type: toType, quality: quality });
+            var base = bulkFiles[i].name.replace(/\.[^.]+$/i, "");
+            var ext = toType === "image/jpeg" ? "jpg" : "png";
+            bulkConverted.push({ blob: blob, name: base + "." + ext });
+          } catch (e) {
+            bulkConverted.push({ error: bulkFiles[i].name });
+          }
+        }
+        bulkMessage.textContent = bulkConverted.filter(function(x) { return !x.error; }).length + " converted.";
+        bulkMessage.className = "message visible success";
+        bulkConvertBtn.disabled = false;
+        bulkDownloadZipBtn.style.display = "inline-block";
+        bulkDownloadZipBtn.disabled = false;
+      });
+      bulkDownloadZipBtn.addEventListener("click", function() {
+        if (typeof JSZip === "undefined" || bulkConverted.length === 0) return;
+        var zip = new JSZip();
+        bulkConverted.forEach(function(item) {
+          if (item.error) return;
+          zip.file(item.name, item.blob);
+        });
+        zip.generateAsync({ type: "blob" }).then(function(blob) {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "heic-converted.zip";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+      });
     })();
   </script>
 </body>

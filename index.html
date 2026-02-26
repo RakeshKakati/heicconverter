@@ -812,13 +812,27 @@
       var params = new URLSearchParams(window.location.search);
       if (params.get("bulk_success") === "1" && params.get("session_id")) {
         var sessionId = params.get("session_id");
-        fetch("/api/verify-session?session_id=" + encodeURIComponent(sessionId)).then(function(r) { return r.json(); }).then(function(data) {
+        localStorage.setItem(BULK_STORAGE_KEY, sessionId);
+        fetch("/api/verify-session?session_id=" + encodeURIComponent(sessionId)).then(function(r) { return r.json();         }).then(function(data) {
           if (data.ok) {
-            localStorage.setItem(BULK_STORAGE_KEY, sessionId);
             bulkUnlocked = true;
-            window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+            window.history.replaceState({}, "", window.location.pathname + "#converter");
             tabBulk.click();
+          } else {
+            bulkMessage.textContent = "Payment received. Refresh the page to unlock bulk.";
+            bulkMessage.className = "message visible success";
+            panelBulk.classList.add("active");
+            panelSingle.classList.remove("active");
+            tabBulk.classList.add("active");
+            tabSingle.classList.remove("active");
           }
+        }).catch(function() {
+          bulkMessage.textContent = "Payment received. Refresh the page to unlock bulk.";
+          bulkMessage.className = "message visible success";
+          panelBulk.classList.add("active");
+          panelSingle.classList.remove("active");
+          tabBulk.classList.add("active");
+          tabSingle.classList.remove("active");
         });
       } else { checkBulkSession(); }
       tabSingle.addEventListener("click", function() {

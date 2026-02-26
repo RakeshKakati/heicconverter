@@ -13,9 +13,8 @@ module.exports = async (req, res) => {
   }
 
   const stripe = new Stripe(secret);
-  const origin = req.headers["x-forwarded-host"]
-    ? `https://${req.headers["x-forwarded-host"]}`
-    : req.headers.origin || "http://localhost:3000";
+  const host = req.headers["x-forwarded-host"] || req.headers["host"];
+  const origin = host ? "https://" + host.split(",")[0].trim() : (req.headers.origin || "http://localhost:3000");
 
   try {
     const session = await stripe.checkout.sessions.create({

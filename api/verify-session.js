@@ -19,9 +19,7 @@ module.exports = async (req, res) => {
   const stripe = new Stripe(secret);
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ["payment_status"],
-    });
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status !== "paid") {
       return res.status(200).json({ ok: false });

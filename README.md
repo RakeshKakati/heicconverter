@@ -23,6 +23,26 @@ npx serve -p 8080
 
 Then visit **http://localhost:8080**.
 
+## Deploy on Vercel
+
+1. **Create a GitHub repo** (one-time):
+   - Go to [github.com/new](https://github.com/new)
+   - Name it e.g. `heicconverter`, set visibility, then **Create repository** (do not add a README or .gitignore—you already have them)
+
+2. **Push this project** (from the project folder):
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/heicconverter.git
+   git branch -M main
+   git push -u origin main
+   ```
+   Replace `YOUR_USERNAME` with your GitHub username.
+
+3. **Deploy on Vercel**:
+   - Go to [vercel.com](https://vercel.com) and sign in with GitHub
+   - **Add New Project** → import your `heicconverter` repo
+   - Leave build settings as default (no build command; output is the root)
+   - Click **Deploy**. Your site will be live at `https://heicconverter-*.vercel.app` (or your custom domain).
+
 ## Tech
 
 - Single-file HTML/CSS/JS

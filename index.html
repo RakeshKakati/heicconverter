@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HEIC Converter — Convert HEIC to JPEG, PNG, GIF Free</title>
-  <meta name="description" content="Convert HEIC and HEIF photos to JPEG, PNG, or GIF in your browser. Free, private, no uploads." />
+  <title>HEIC Converter — Convert HEIC to JPEG, PNG Free</title>
+  <meta name="description" content="Convert HEIC and HEIF photos to JPEG or PNG in your browser. Free, private, no uploads. Works with iPhone and Mac." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic-to@1.4.2/dist/iife/heic-to.js"></script>
   <style>
     :root {
       --bg: #0d0d0f;
@@ -380,7 +380,7 @@
 </head>
 <body>
   <section class="landing" aria-label="Introduction">
-    <h1>Convert HEIC to JPEG, PNG or GIF</h1>
+    <h1>Convert HEIC to JPEG or PNG</h1>
     <p class="tagline">iPhone and Mac photos in HEIC format—convert them in one click. Free, private, and runs in your browser. No uploads.</p>
     <a href="#converter" class="cta">Convert a photo now</a>
     <div class="benefits">
@@ -407,11 +407,10 @@
       <div class="options">
         <div class="option-row">
           <label for="format">Output format</label>
-          <select id="format">
-            <option value="image/jpeg">JPEG</option>
-            <option value="image/png">PNG</option>
-            <option value="image/gif">GIF</option>
-          </select>
+        <select id="format">
+          <option value="image/jpeg">JPEG</option>
+          <option value="image/png">PNG</option>
+        </select>
         </div>
         <div class="quality-row" id="qualityRow">
           <label for="quality">Quality</label>
@@ -437,7 +436,7 @@
   </section>
 
   <footer>
-    Conversion runs entirely in your browser via <a href="https://github.com/alexcorvi/heic2any" target="_blank" rel="noopener">heic2any</a>. No server uploads.
+    Conversion runs in your browser via <a href="https://github.com/hoppergee/heic-to" target="_blank" rel="noopener">heic-to</a> (libheif). No uploads.
   </footer>
 
   <script>
@@ -600,12 +599,11 @@
         const quality = toType === "image/jpeg" ? Number(qualityInput.value) : undefined;
 
         try {
-          const result = await heic2any({
+          const blob = await HeicTo({
             blob: currentBlob,
-            toType: toType,
+            type: toType,
             quality: quality
           });
-          const blob = Array.isArray(result) ? result[0] : result;
           if (!blob) throw new Error("Conversion produced no output.");
           convertedBlob = blob;
           convertedFileName = currentFileName + "." + getExtension(toType);
@@ -615,7 +613,7 @@
           downloadBtn.style.display = "inline-block";
           showMessage("Conversion complete.", "success");
         } catch (err) {
-          showMessage("Conversion failed. Make sure the file is a valid HEIC/HEIF photo from iPhone or Mac.", "error");
+          showMessage("Conversion failed. The file may be corrupted or in an unsupported format.", "error");
         } finally {
           convertBtn.disabled = false;
         }
